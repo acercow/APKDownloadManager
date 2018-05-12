@@ -1,15 +1,17 @@
 package com.example.jansen.downloader;
 
 
-import android.net.Uri;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.text.TextUtils;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class FileData implements Parcelable {
     private static final String DEFAULT_FILE_APK_NAME = "weibo_download";
 
-    private Uri uri;
+    private String uri;
     private boolean isInvokeInstall;
     private boolean isAllowDuplicated;
 
@@ -24,10 +26,7 @@ public class FileData implements Parcelable {
     }
 
     public FileData(String uri, boolean isEvokeInstall, boolean isAllowDuplicated, String title, String description, String fileName) {
-        if (TextUtils.isEmpty(uri) || !uri.startsWith("http")) { // 下载只能以http/https开头
-            return;
-        }
-        this.uri = Uri.parse(uri);
+        this.uri = uri;
         this.isInvokeInstall = isEvokeInstall;
         this.isAllowDuplicated = isAllowDuplicated;
         this.title = title;
@@ -35,14 +34,17 @@ public class FileData implements Parcelable {
         if (TextUtils.isEmpty(fileName)) {
             fileName = DEFAULT_FILE_APK_NAME;
         }
-        this.fileName = fileName;
+        if (fileName.endsWith(".apk")) {
+            fileName = fileName.substring(0, fileName.length() - 4);
+        }
+        this.fileName = fileName + "-" + suffix(fileName) + ".apk";
     }
 
-    public Uri getUri() {
+    public String getUri() {
         return uri;
     }
 
-    public void setUri(Uri uri) {
+    public void setUri(String uri) {
         this.uri = uri;
     }
 
@@ -50,16 +52,8 @@ public class FileData implements Parcelable {
         return isInvokeInstall;
     }
 
-    public void setInvokeInstall(boolean invokeInstall) {
-        isInvokeInstall = invokeInstall;
-    }
-
     public boolean isAllowDuplicated() {
         return isAllowDuplicated;
-    }
-
-    public void setAllowDuplicated(boolean allowDuplicated) {
-        isAllowDuplicated = allowDuplicated;
     }
 
     public String getTitle() {
@@ -74,16 +68,8 @@ public class FileData implements Parcelable {
         return description;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
     public String getFileName() {
         return fileName;
-    }
-
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
     }
 
     public long getDownloadId() {
@@ -120,6 +106,12 @@ public class FileData implements Parcelable {
                 '}';
     }
 
+    private String suffix(String fileName) {
+        Date date = new Date();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddhhmmss");
+       return dateFormat.format(date);
+    }
+
     @Override
     public int describeContents() {
         return 0;
@@ -127,7 +119,7 @@ public class FileData implements Parcelable {
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        dest.writeParcelable(this.uri, flags);
+        dest.writeString(this.uri);
         dest.writeByte(this.isInvokeInstall ? (byte) 1 : (byte) 0);
         dest.writeByte(this.isAllowDuplicated ? (byte) 1 : (byte) 0);
         dest.writeString(this.title);
@@ -137,7 +129,7 @@ public class FileData implements Parcelable {
     }
 
     protected FileData(Parcel in) {
-        this.uri = in.readParcelable(Uri.class.getClassLoader());
+        this.uri = in.readString();
         this.isInvokeInstall = in.readByte() != 0;
         this.isAllowDuplicated = in.readByte() != 0;
         this.title = in.readString();

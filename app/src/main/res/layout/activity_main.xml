@@ -15,13 +15,13 @@
 
     <Button
         android:id="@+id/download_btn_1"
-        android:text="Start Download 1"
+        android:text="Start Download [Backup]"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
 
     <Button
         android:id="@+id/download_btn_2"
-        android:text="Start Download 2"
+        android:text="Start Download [PUBG]"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
 </LinearLayout>

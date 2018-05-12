@@ -5,6 +5,8 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Environment;
 import android.os.IBinder;
 import android.text.TextUtils;
@@ -20,6 +22,7 @@ import java.util.List;
  */
 public abstract class BaseAPKDownloader extends Service implements DownloadCompleteReceiver.ICallback {
     private static final String TAG = BaseAPKDownloader.class.getSimpleName();
+    public static final String EXTRA_DOWNLOAD_FILE_DATA = "com.acercow.extra.filedata";
     private List<FileData> mFileLists;
     private DownloadManager mDownloadManager;
     private DownloadCompleteReceiver mCompleteReceiver;
@@ -45,9 +48,13 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.v(TAG, "APKDownload Service -> onStartCommand");
-        FileData fileData = (FileData) intent.getParcelableExtra("filedata");
+        FileData fileData = intent.getParcelableExtra(EXTRA_DOWNLOAD_FILE_DATA);
         if (fileData != null) {
-            download(fileData);
+            if (!TextUtils.isEmpty(fileData.getUri()) && fileData.getUri().startsWith("http")) { // 下载只能以http/https开头
+                download(fileData);
+            } else {
+                Log.i(TAG, "The download uri must start with http or https!");
+            }
         }
         return super.onStartCommand(intent, flags, startId);
     }
@@ -76,7 +83,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
     private void download(FileData fileData) {
         makeDownloadDir(); // check each time when download start to ensure dir's validation
         if (duplicateCheck(fileData)) {
-            long downloadId = mDownloadManager.enqueue(new DownloadManager.Request(fileData.getUri())
+            long downloadId = mDownloadManager.enqueue(new DownloadManager.Request(Uri.parse(fileData.getUri()))
                     .setAllowedNetworkTypes(DownloadManager.Request.NETWORK_MOBILE | DownloadManager.Request.NETWORK_WIFI)
                     .setAllowedOverRoaming(true)
                     .setTitle(fileData.getTitle())
@@ -86,9 +93,9 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
             fileData.setDownloadId(downloadId);
             add(fileData);
             Log.i(TAG, "fileData: " + fileData);
-            onDownloadStart();
+            onDownloadStart(fileData);
         } else {
-            onDownloadDuplicate();
+            onDownloadDuplicate(fileData);
         }
     }
 
@@ -117,9 +124,10 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
         }
         File destApk = new File(mDestDir, fileData.getFileName());
         if (!destApk.exists()) {
-            onInstallingFileNotExist(id);
+            onInstallingFileNotExist(fileData);
             return null;
         }
+        Log.i(TAG, "Dest apk: " + destApk);
         return destApk;
     }
 
@@ -222,20 +230,41 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
         }
     }
 
+    private void checkStatus(long downloadId) {
+        DownloadManager.Query query = new DownloadManager.Query().setFilterById(downloadId);
+        Cursor c = mDownloadManager.query(query);
+        if (c != null && c.moveToFirst()) {
+            int status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+            Log.i(TAG, "Status: " + status);
+            switch (status) {
+                case DownloadManager.STATUS_PENDING:
+                    break;
+                case DownloadManager.STATUS_PAUSED:
+                    break;
+                case DownloadManager.STATUS_RUNNING:
+                    break;
+                case DownloadManager.STATUS_SUCCESSFUL:
+                    break;
+                case DownloadManager.STATUS_FAILED:
+                    break;
+            }
+        }
+    }
+
     /**
      * Called when downloading file which is not allowed duplicate
      */
-    protected abstract void onDownloadDuplicate();
+    protected abstract void onDownloadDuplicate(FileData fileData);
 
     /**
      * Called when a new download task starting
      */
-    protected abstract void onDownloadStart();
+    protected abstract void onDownloadStart(FileData fileData);
 
     /**
      * Called when invoking installing apk whose path is missing
      */
-    protected abstract void onInstallingFileNotExist(long downloadId);
+    protected abstract void onInstallingFileNotExist(FileData fileData);
 
     /**
      * Called when invoking installing apk which is not in the array list

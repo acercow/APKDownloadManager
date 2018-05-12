@@ -10,11 +10,13 @@ import android.os.Build;
 import android.support.v4.content.FileProvider;
 import android.util.Log;
 
+import com.example.jansen.down.BuildConfig;
+
 import java.io.File;
 
 
 public class DownloadCompleteReceiver extends BroadcastReceiver {
-    public static final String APK_FILEPROVIDER_AUTHORITIES = "com.acercow.fileprovider"; // see in res/AndroidManifest.xml
+    public static final String APK_FILEPROVIDER_AUTHORITIES = BuildConfig.APPLICATION_ID + ".fileprovider"; // see in res/AndroidManifest.xml
     private static final String TAG = DownloadCompleteReceiver.class.getSimpleName();
 
     private ICallback mListener;
@@ -42,7 +44,6 @@ public class DownloadCompleteReceiver extends BroadcastReceiver {
                     mListener.onClickNotification(id);
                 }
                 break;
-
             default:
                 break;
         }
