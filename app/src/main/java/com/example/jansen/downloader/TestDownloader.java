@@ -9,18 +9,18 @@ public class TestDownloader extends BaseAPKDownloader {
     }
 
     @Override
-    protected void onDownloadDuplicate() {
+    protected void onDownloadDuplicate(FileData fileData) {
         Toast.makeText(getApplicationContext(), "onDownloadDuplicate", Toast.LENGTH_SHORT).show();
     }
 
     @Override
-    protected void onDownloadStart() {
+    protected void onDownloadStart(FileData fileData) {
         Toast.makeText(getApplicationContext(), "onDownloadStart", Toast.LENGTH_SHORT).show();
 
     }
 
     @Override
-    protected void onInstallingFileNotExist(long downloadId) {
+    protected void onInstallingFileNotExist(FileData fileData) {
         Toast.makeText(getApplicationContext(), "onInstallingFileNotExist", Toast.LENGTH_SHORT).show();
 
     }

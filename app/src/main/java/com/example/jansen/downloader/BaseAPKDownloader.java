@@ -82,7 +82,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
      */
     private void download(FileData fileData) {
         makeDownloadDir(); // check each time when download start to ensure dir's validation
-        if (duplicateCheck(fileData)) {
+        if (passDuplicateCheck(fileData)) {
             long downloadId = mDownloadManager.enqueue(new DownloadManager.Request(Uri.parse(fileData.getUri()))
                     .setAllowedNetworkTypes(DownloadManager.Request.NETWORK_MOBILE | DownloadManager.Request.NETWORK_WIFI)
                     .setAllowedOverRoaming(true)
@@ -144,8 +144,18 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
      * @param fileData
      * @return <tt>true</tt> if is allowed to download
      */
-    private boolean duplicateCheck(FileData fileData) {
-        return !mFileLists.contains(fileData) || fileData.isAllowDuplicated();
+    private boolean passDuplicateCheck(FileData fileData) {
+        // If is duplicate and disallow duplicate
+        boolean isDuplicate = mFileLists.contains(fileData) && !fileData.isAllowDuplicated();
+        if (isDuplicate) {
+            FileData oldFileData = mFileLists.get(mFileLists.indexOf(fileData));
+            int status = checkStatus(oldFileData.getDownloadId());
+            return  (status == -1 || status == DownloadManager.STATUS_FAILED || status == DownloadManager.STATUS_SUCCESSFUL);
+        } else {
+            return true;
+        }
+
+        // if download is interrupt or finish
     }
 
     private void add(FileData fileData) {
@@ -170,6 +180,9 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
                 Log.i(TAG, "removed item: " + downloadId);
 
             }
+        }
+        if (mFileLists.size() < 1) {
+            stopSelf();
         }
     }
 
@@ -216,6 +229,11 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
         if (fileData == null) {
             return;
         }
+        // User canceling download progress also receives COMPLETE broaddcast
+        if (checkStatus(id) == -1) {
+            remove(id);
+            return;
+        }
         onDownloadComplete(fileData);
         if (fileData.isInvokeInstall()) {
             File destApk = getDestFile(id);
@@ -225,30 +243,38 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
             DownloadCompleteReceiver.invokeInstall(getApplicationContext(), destApk);
         }
         remove(id);
-        if (mFileLists.size() < 1) {
-            stopSelf();
-        }
     }
 
-    private void checkStatus(long downloadId) {
+    private int checkStatus(long downloadId) {
         DownloadManager.Query query = new DownloadManager.Query().setFilterById(downloadId);
         Cursor c = mDownloadManager.query(query);
-        if (c != null && c.moveToFirst()) {
-            int status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
-            Log.i(TAG, "Status: " + status);
-            switch (status) {
-                case DownloadManager.STATUS_PENDING:
-                    break;
-                case DownloadManager.STATUS_PAUSED:
-                    break;
-                case DownloadManager.STATUS_RUNNING:
-                    break;
-                case DownloadManager.STATUS_SUCCESSFUL:
-                    break;
-                case DownloadManager.STATUS_FAILED:
-                    break;
+        try {
+            if (c != null && c.moveToFirst()) {
+                int status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+                Log.i(TAG, "Status: " + status);
+                switch (status) {
+                    case DownloadManager.STATUS_PENDING:
+                        break;
+                    case DownloadManager.STATUS_PAUSED:
+                        break;
+                    case DownloadManager.STATUS_RUNNING:
+                        break;
+                    case DownloadManager.STATUS_SUCCESSFUL:
+                        break;
+                    case DownloadManager.STATUS_FAILED:
+                        remove(downloadId);
+                        break;
+                }
+                return status;
+            }
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        } finally {
+            if (c != null) {
+                c.close();
             }
         }
+        return -1;
     }
 
     /**
