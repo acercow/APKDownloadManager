@@ -71,6 +71,7 @@ public class DownloadCompleteReceiver extends BroadcastReceiver {
         } else {
             uri = Uri.fromFile(file);
         }
+        Log.i(TAG, "uri: " + uri);
         return uri;
     }
 }

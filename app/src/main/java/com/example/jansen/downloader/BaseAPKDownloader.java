@@ -30,11 +30,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
     public void onCreate() {
         Log.v(TAG, "APKDownload Service -> onCreate");
         super.onCreate();
-    }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.v(TAG, "APKDownload Service -> onStartCommand");
         if (!isRegistered) {
             registerReceiver();
         }
@@ -43,6 +39,15 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
         }
         if (mFileLists == null) {
             mFileLists = new ArrayList<>();
+        }
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.v(TAG, "APKDownload Service -> onStartCommand");
+        FileData fileData = (FileData) intent.getParcelableExtra("filedata");
+        if (fileData != null) {
+            download(fileData);
         }
         return super.onStartCommand(intent, flags, startId);
     }
@@ -69,7 +74,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
      * @param fileData
      */
     private void download(FileData fileData) {
-        makeDownloadDir();
+        makeDownloadDir(); // check each time when download start to ensure dir's validation
         if (duplicateCheck(fileData)) {
             long downloadId = mDownloadManager.enqueue(new DownloadManager.Request(fileData.getUri())
                     .setAllowedNetworkTypes(DownloadManager.Request.NETWORK_MOBILE | DownloadManager.Request.NETWORK_WIFI)

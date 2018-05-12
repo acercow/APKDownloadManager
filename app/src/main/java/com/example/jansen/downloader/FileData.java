@@ -2,9 +2,11 @@ package com.example.jansen.downloader;
 
 
 import android.net.Uri;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.text.TextUtils;
 
-public class FileData {
+public class FileData implements Parcelable {
     private static final String DEFAULT_FILE_APK_NAME = "weibo_download";
 
     private Uri uri;
@@ -117,4 +119,42 @@ public class FileData {
                 ", description='" + description + '\'' +
                 '}';
     }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeParcelable(this.uri, flags);
+        dest.writeByte(this.isInvokeInstall ? (byte) 1 : (byte) 0);
+        dest.writeByte(this.isAllowDuplicated ? (byte) 1 : (byte) 0);
+        dest.writeString(this.title);
+        dest.writeString(this.description);
+        dest.writeString(this.fileName);
+        dest.writeLong(this.downloadId);
+    }
+
+    protected FileData(Parcel in) {
+        this.uri = in.readParcelable(Uri.class.getClassLoader());
+        this.isInvokeInstall = in.readByte() != 0;
+        this.isAllowDuplicated = in.readByte() != 0;
+        this.title = in.readString();
+        this.description = in.readString();
+        this.fileName = in.readString();
+        this.downloadId = in.readLong();
+    }
+
+    public static final Creator<FileData> CREATOR = new Creator<FileData>() {
+        @Override
+        public FileData createFromParcel(Parcel source) {
+            return new FileData(source);
+        }
+
+        @Override
+        public FileData[] newArray(int size) {
+            return new FileData[size];
+        }
+    };
 }
