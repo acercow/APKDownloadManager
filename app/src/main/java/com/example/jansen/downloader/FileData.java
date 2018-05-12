@@ -8,7 +8,7 @@ public class FileData {
     private static final String DEFAULT_FILE_APK_NAME = "weibo_download";
 
     private Uri uri;
-    private boolean isEvokeInstall;
+    private boolean isInvokeInstall;
     private boolean isAllowDuplicated;
 
     private String title;
@@ -26,7 +26,7 @@ public class FileData {
             return;
         }
         this.uri = Uri.parse(uri);
-        this.isEvokeInstall = isEvokeInstall;
+        this.isInvokeInstall = isEvokeInstall;
         this.isAllowDuplicated = isAllowDuplicated;
         this.title = title;
         this.description = description;
@@ -44,12 +44,12 @@ public class FileData {
         this.uri = uri;
     }
 
-    public boolean isEvokeInstall() {
-        return isEvokeInstall;
+    public boolean isInvokeInstall() {
+        return isInvokeInstall;
     }
 
-    public void setEvokeInstall(boolean evokeInstall) {
-        isEvokeInstall = evokeInstall;
+    public void setInvokeInstall(boolean invokeInstall) {
+        isInvokeInstall = invokeInstall;
     }
 
     public boolean isAllowDuplicated() {
@@ -111,7 +111,7 @@ public class FileData {
     public String toString() {
         return "FileData{" +
                 "uri=" + uri +
-                ", isEvokeInstall=" + isEvokeInstall +
+                ", isInvokeInstall=" + isInvokeInstall +
                 ", isAllowDuplicated=" + isAllowDuplicated +
                 ", title='" + title + '\'' +
                 ", description='" + description + '\'' +

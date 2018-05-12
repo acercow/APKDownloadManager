@@ -8,33 +8,33 @@ import android.content.IntentFilter;
 import android.os.Environment;
 import android.os.IBinder;
 import android.text.TextUtils;
+import android.util.Log;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import tv.xiaoka.base.util.YZBLogUtil;
-
 /**
- *
+ * Created by zhaosen 2018-05-12
  */
 public abstract class BaseAPKDownloader extends Service implements DownloadCompleteReceiver.ICallback {
-
+    private static final String TAG = BaseAPKDownloader.class.getSimpleName();
     private List<FileData> mFileLists;
     private DownloadManager mDownloadManager;
     private DownloadCompleteReceiver mCompleteReceiver;
     private boolean isRegistered;
+    private File mDestDir;
 
     @Override
     public void onCreate() {
-        YZBLogUtil.v("APKDownload Service -> onCreate");
+        Log.v(TAG, "APKDownload Service -> onCreate");
         super.onCreate();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        YZBLogUtil.v("APKDownload Service -> onStartCommand");
+        Log.v(TAG, "APKDownload Service -> onStartCommand");
         if (!isRegistered) {
             registerReceiver();
         }
@@ -49,7 +49,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
 
     @Override
     public void onDestroy() {
-        YZBLogUtil.v("APKDownload Service -> onDestroy");
+        Log.v(TAG, "APKDownload Service -> onDestroy");
         if (isRegistered) {
             unRegisterReceiver();
         }
@@ -59,12 +59,13 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
 
     @Override
     public IBinder onBind(Intent intent) {
-        YZBLogUtil.v("APKDownload Service -> onBind");
+        Log.v(TAG, "APKDownload Service -> onBind");
         return null;
     }
 
     /**
      * Main method to invoke file download
+     *
      * @param fileData
      */
     private void download(FileData fileData) {
@@ -79,33 +80,47 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
                     .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileData.getFileName()));
             fileData.setDownloadId(downloadId);
             add(fileData);
-            YZBLogUtil.i("fileData: " + fileData);
-            downloadStart();
+            Log.i(TAG, "fileData: " + fileData);
+            onDownloadStart();
         } else {
-            downloadDuplicate();
+            onDownloadDuplicate();
         }
     }
 
     private void makeDownloadDir() {
-        String subDir = subDir();
-        File destDir;
-        if (TextUtils.isEmpty(subDir)) {
-            destDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        } else {
-            destDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), subDir());
+        if (mDestDir == null) {
+            if (TextUtils.isEmpty(subDir())) {
+                mDestDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            } else {
+                mDestDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), subDir());
+            }
         }
-        if (!destDir.exists()) {
+        if (!mDestDir.exists()) {
             try {
-                boolean isCreated = destDir.mkdir();
-                YZBLogUtil.i("mkdir: " + destDir + " [result: " + isCreated + "]" );
+                boolean isCreated = mDestDir.mkdir();
+                Log.i(TAG, "mkdir: " + mDestDir + " [result: " + isCreated + "]");
             } catch (SecurityException e) {
                 e.printStackTrace();
             }
         }
     }
 
+    private File getDestFile(long id) {
+        FileData fileData = get(id);
+        if (fileData == null) {
+            return null;
+        }
+        File destApk = new File(mDestDir, fileData.getFileName());
+        if (!destApk.exists()) {
+            onInstallingFileNotExist(id);
+            return null;
+        }
+        return destApk;
+    }
+
     /**
      * Generate sub-dir in DIRECTORY_DOWNLOADS
+     *
      * @return Sub-directory name, if do not need sub-dir, just return null or empty string
      */
     protected abstract String subDir();
@@ -121,7 +136,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
     }
 
     private void add(FileData fileData) {
-       mFileLists.add(fileData);
+        mFileLists.add(fileData);
     }
 
     private FileData get(long downloadId) {
@@ -130,7 +145,8 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
                 return fileData;
             }
         }
-        throw new IllegalStateException("No matched download id in queue!");
+        onFileNotInQueue(downloadId);
+        return null;
     }
 
     private void remove(long downloadId) {
@@ -138,6 +154,8 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
         while (iterator.hasNext()) {
             if (iterator.next().getDownloadId() == downloadId) {
                 iterator.remove();
+                Log.i(TAG, "removed item: " + downloadId);
+
             }
         }
     }
@@ -147,7 +165,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
      * See{@link DownloadManager#ACTION_DOWNLOAD_COMPLETE} etc.
      */
     private void registerReceiver() {
-        YZBLogUtil.v("BroadcastReceiver -> registered");
+        Log.v(TAG, "BroadcastReceiver -> registered");
         isRegistered = true;
         if (mCompleteReceiver == null) {
             mCompleteReceiver = new DownloadCompleteReceiver();
@@ -161,7 +179,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
     }
 
     private void unRegisterReceiver() {
-        YZBLogUtil.v("BroadcastReceiver -> unRegistered");
+        Log.v(TAG, "BroadcastReceiver -> unRegistered");
         isRegistered = false;
         if (mCompleteReceiver != null) {
             getApplicationContext().unregisterReceiver(mCompleteReceiver);
@@ -170,15 +188,28 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
 
     @Override
     public void onClickNotification(long id) {
-        clickNotification(get(id));
+        Log.i(TAG, "BroadcastReceiver -> onClickNotification: " + id);
+        FileData fileData = get(id);
+        if (fileData == null) {
+            return;
+        }
+        onClickNotification(fileData);
     }
 
     @Override
     public void onComplete(long id) {
+        Log.i(TAG, "BroadcastReceiver -> onComplete: " + id);
         FileData fileData = get(id);
-        downloadComplete(fileData);
-        if (fileData.isEvokeInstall()) {
-            DownloadCompleteReceiver.invokeInstall(getApplicationContext());
+        if (fileData == null) {
+            return;
+        }
+        onDownloadComplete(fileData);
+        if (fileData.isInvokeInstall()) {
+            File destApk = getDestFile(id);
+            if (destApk == null) {
+                return;
+            }
+            DownloadCompleteReceiver.invokeInstall(getApplicationContext(), destApk);
         }
         remove(id);
         if (mFileLists.size() < 1) {
@@ -186,10 +217,38 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
         }
     }
 
-    protected abstract void downloadDuplicate();
-    protected abstract void downloadStart();
+    /**
+     * Called when downloading file which is not allowed duplicate
+     */
+    protected abstract void onDownloadDuplicate();
+
+    /**
+     * Called when a new download task starting
+     */
+    protected abstract void onDownloadStart();
+
+    /**
+     * Called when invoking installing apk whose path is missing
+     */
+    protected abstract void onInstallingFileNotExist(long downloadId);
+
+    /**
+     * Called when invoking installing apk which is not in the array list
+     */
+    protected abstract void onFileNotInQueue(long downloadId);
 
 
-    protected abstract void downloadComplete(FileData fileData);
-    protected abstract void clickNotification(FileData fileData);
+    /**
+     * Called when receiving system broadcast of downloading complete
+     *
+     * @param fileData
+     */
+    protected abstract void onDownloadComplete(FileData fileData);
+
+    /**
+     * Called when receiving system broadcast of clicking on notification by user
+     *
+     * @param fileData
+     */
+    protected abstract void onClickNotification(FileData fileData);
 }
