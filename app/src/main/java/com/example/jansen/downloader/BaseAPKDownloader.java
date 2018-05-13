@@ -160,7 +160,22 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
 //        } else {
 //            return true;
 //        }
-        return !isDuplicate;
+        if (isDuplicate) {
+            FileData oldFileData = mFileLists.get(mFileLists.indexOf(fileData));
+            File file = new File(mDestDir, oldFileData.getFileName());
+             // 在多数"下载"应用中删除文件，有系统广播，但是在文件管理器中或如MIUI系统的"下载"中删除，无广播
+             // 所以此时通过路径判断
+            if (file.exists()) {
+                return false;
+            } else {
+                // 下载同一文件发现被删除，先取消下载器中任务，注意会触发COMPLETE广播，status为cancel
+                // 收到广播后会删除队列，检查是否需要停止服务和广播等
+                mDownloadManager.remove(oldFileData.getDownloadId());
+                return true;
+            }
+        } else {
+            return true;
+        }
 
         // if download is interrupt or finish
     }
@@ -280,7 +295,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
                         break;
                 }
                 return status;
-            } else {
+            } else { // Self difined status type: download canceled
                 int selfDefinedStatus = 1 << 7;
                 Log.i(TAG, "Status: " + selfDefinedStatus + " (means canceled, not defined in api)");
                 onDownloadCanceled(fileData);
