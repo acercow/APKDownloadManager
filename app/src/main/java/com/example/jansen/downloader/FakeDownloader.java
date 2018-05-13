@@ -5,7 +5,7 @@ import android.widget.Toast;
 public class FakeDownloader extends BaseAPKDownloader {
     @Override
     protected String subDir() {
-        return null;
+        return "ACEDownloadFolder";
     }
 
     @Override

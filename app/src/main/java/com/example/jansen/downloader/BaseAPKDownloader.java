@@ -95,7 +95,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
                     .setTitle(fileData.getTitle())
                     .setDescription(fileData.getDescription())
                     .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                    .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileData.getFileName()));
+                    .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, subDir() + File.separator + fileData.getFileName()));
             fileData.setDownloadId(downloadId);
             add(fileData);
             Log.i(TAG, "fileData: " + fileData);
