@@ -2,7 +2,7 @@ package com.example.jansen.downloader;
 
 import android.widget.Toast;
 
-public class TestDownloader extends BaseAPKDownloader {
+public class FakeDownloader extends BaseAPKDownloader {
     @Override
     protected String subDir() {
         return null;
@@ -37,7 +37,7 @@ public class TestDownloader extends BaseAPKDownloader {
     }
 
     @Override
-    protected void onDownloadComplete(FileData fileData) {
+    protected void onDownloadCompleted(FileData fileData) {
         Toast.makeText(getApplicationContext(), "onDownloadComplete", Toast.LENGTH_SHORT).show();
 
     }
@@ -50,6 +50,5 @@ public class TestDownloader extends BaseAPKDownloader {
     @Override
     protected void onClickNotification(FileData fileData) {
         Toast.makeText(getApplicationContext(), "onClickNotification", Toast.LENGTH_SHORT).show();
-        return;
     }
 }

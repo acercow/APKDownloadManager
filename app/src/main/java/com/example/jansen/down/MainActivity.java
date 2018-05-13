@@ -1,14 +1,11 @@
 package com.example.jansen.down;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 
+import com.example.jansen.downloader.BaseAPKDownloader;
 import com.example.jansen.downloader.FileData;
-import com.example.jansen.downloader.TestDownloader;
-
-import static com.example.jansen.downloader.BaseAPKDownloader.EXTRA_DOWNLOAD_FILE_DATA;
 
 public class MainActivity extends Activity {
 
@@ -20,27 +17,21 @@ public class MainActivity extends Activity {
         findViewById(R.id.download_btn_1).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, TestDownloader.class);
-                intent.putExtra(EXTRA_DOWNLOAD_FILE_DATA, fakeData1());
-                startService(intent);
+                BaseAPKDownloader.startDownload(MainActivity.this, fakeData1());
             }
         });
 
         findViewById(R.id.download_btn_2).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, TestDownloader.class);
-                intent.putExtra(EXTRA_DOWNLOAD_FILE_DATA, fakeData2());
-                startService(intent);
+                BaseAPKDownloader.startDownload(MainActivity.this, fakeData2());
             }
         });
 
         findViewById(R.id.download_btn_3).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, TestDownloader.class);
-                intent.putExtra(EXTRA_DOWNLOAD_FILE_DATA, fakeData3());
-                startService(intent);
+                BaseAPKDownloader.startDownload(MainActivity.this, fakeData3());
             }
         });
     }

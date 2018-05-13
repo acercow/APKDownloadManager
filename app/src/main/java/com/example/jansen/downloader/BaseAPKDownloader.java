@@ -271,7 +271,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
                             }
                             DownloadCompleteReceiver.invokeInstall(getApplicationContext(), destApk);
                         }
-                        onDownloadComplete(fileData);
+                        onDownloadCompleted(fileData);
                         remove(downloadId);
                         break;
                     case DownloadManager.STATUS_FAILED:
@@ -299,6 +299,19 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
 
     public List<FileData> getCurrentDownloads() {
         return mFileLists;
+    }
+
+    public static void startDownload(Context context, String uri, String title, String filename) {
+        startDownload(context, new FileData(uri, title, filename));
+    }
+
+
+    public static void startDownload(Context context, FileData fileData) {
+        Intent intent = new Intent();
+        intent.setData(Uri.parse("arczues://startdownload"));
+        intent.setPackage(context.getPackageName());
+        intent.putExtra(EXTRA_DOWNLOAD_FILE_DATA, fileData);
+        context.startService(intent);
     }
 
     public void cancelDownloads(FileData... fileDatas) {
@@ -350,7 +363,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
      *
      * @param fileData
      */
-    protected abstract void onDownloadComplete(FileData fileData);
+    protected abstract void onDownloadCompleted(FileData fileData);
 
     /**
      * Called when receiving system broadcast of downloading failed

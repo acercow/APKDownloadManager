@@ -34,8 +34,12 @@
             </intent-filter>
         </activity>
 
-        <service android:name="com.example.jansen.downloader.TestDownloader" >
-
+        <service android:name="com.example.jansen.downloader.FakeDownloader"
+            android:exported="false">
+            <intent-filter>
+                <data android:scheme="arczues"/>
+                <data android:host="startdownload"/>
+            </intent-filter>
         </service>
     </application>
 
