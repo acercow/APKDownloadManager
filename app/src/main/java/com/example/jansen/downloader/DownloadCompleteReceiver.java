@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.support.v4.content.FileProvider;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.example.jansen.down.BuildConfig;
@@ -33,21 +34,27 @@ public class DownloadCompleteReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         Log.i(TAG, "Receive DownloadManager broadcast: " + intent.getAction());
-        long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-        if (id == -1) {
-            return; // may not invoked by this downloader
+        if (TextUtils.isEmpty(intent.getAction())) {
+            return;
         }
         switch (intent.getAction()) {
-            // Important!!! 不仅仅是下载成功，下载失败也会收到此广播，但是下载取消不会
+            // Important!!! 不仅仅是下载成功，下载失败、取消下载也会收到此广播
             case DownloadManager.ACTION_DOWNLOAD_COMPLETE:
+                long completeId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                if (completeId == -1) {
+                    return; // may not invoked by this downloader
+                }
                 if (mListener != null) {
-                    mListener.onComplete(id);
+                    mListener.onComplete(completeId);
                 }
                 break;
 
             case DownloadManager.ACTION_NOTIFICATION_CLICKED:
+                long[] ids = intent.getLongArrayExtra(DownloadManager.EXTRA_NOTIFICATION_CLICK_DOWNLOAD_IDS);
                 if (mListener != null) {
-                    mListener.onClickNotification(id);
+                    for (long clickedId : ids) {
+                        mListener.onClickNotification(clickedId);
+                    }
                 }
                 break;
             default:
@@ -58,7 +65,6 @@ public class DownloadCompleteReceiver extends BroadcastReceiver {
 
     public interface ICallback {
         void onClickNotification(long id);
-
         void onComplete(long id);
     }
 

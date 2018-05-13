@@ -14,6 +14,7 @@ import android.util.Log;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -204,9 +205,8 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
         }
         mCompleteReceiver.setCompleteListener(this);
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
         intentFilter.addAction(DownloadManager.ACTION_NOTIFICATION_CLICKED);
-        intentFilter.addAction(DownloadManager.ACTION_VIEW_DOWNLOADS);
+        intentFilter.addAction(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
         getApplicationContext().registerReceiver(mCompleteReceiver, intentFilter);
     }
 
@@ -229,7 +229,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
     }
 
     /**
-     * 注意COMPLETE广播不仅仅是下载完成收到，下载失败、成功都是这个广播。但是取消下载不会发广播
+     * 注意COMPLETE广播不仅仅是下载完成收到，下载失败、取消都是这个广播
      * @param id
      */
     @Override
@@ -281,7 +281,11 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
                 }
                 return status;
             } else {
+                int selfDefinedStatus = 1 << 7;
+                Log.i(TAG, "Status: " + selfDefinedStatus + " (means canceled, not defined in api)");
+                onDownloadCanceled(fileData);
                 remove(downloadId); // Cancel downloading status
+                return selfDefinedStatus;
             }
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
@@ -291,6 +295,26 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
             }
         }
         return -1;
+    }
+
+    public List<FileData> getCurrentDownloads() {
+        return mFileLists;
+    }
+
+    public void cancelDownloads(FileData... fileDatas) {
+        if (fileDatas == null || fileDatas.length < 1) {
+            return;
+        }
+        for (FileData fileData : fileDatas) {
+            mDownloadManager.remove(fileData.getDownloadId());
+        }
+        Log.i(TAG, "Cancel downloading: " + Arrays.toString(fileDatas));
+    }
+
+    public void showDownloadsView() {
+        Intent intent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
     }
 
     /**
@@ -313,9 +337,16 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
      */
     protected abstract void onFileNotInQueue(long downloadId);
 
+    /**
+     * Called when receiving system broadcast of downloading canceled
+     *
+     * @param fileData
+     */
+    protected abstract void onDownloadCanceled(FileData fileData);
+
 
     /**
-     * Called when receiving system broadcast of downloading complete
+     * Called when receiving system broadcast of downloading completed
      *
      * @param fileData
      */

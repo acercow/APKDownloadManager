@@ -32,6 +32,11 @@ public class TestDownloader extends BaseAPKDownloader {
     }
 
     @Override
+    protected void onDownloadCanceled(FileData fileData) {
+        Toast.makeText(getApplicationContext(), "onDownloadCanceled", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
     protected void onDownloadComplete(FileData fileData) {
         Toast.makeText(getApplicationContext(), "onDownloadComplete", Toast.LENGTH_SHORT).show();
 
@@ -45,5 +50,6 @@ public class TestDownloader extends BaseAPKDownloader {
     @Override
     protected void onClickNotification(FileData fileData) {
         Toast.makeText(getApplicationContext(), "onClickNotification", Toast.LENGTH_SHORT).show();
+        return;
     }
 }
