@@ -19,6 +19,11 @@ import java.util.List;
 
 /**
  * Created by zhaosen 2018-05-12
+ *
+ * A service of apk downloading, which contains a downloading queue to control duplicate
+ * downloading(if disallow duplicate), status changing, auto installing, path management,
+ * lifecycle management.
+ *
  */
 public abstract class BaseAPKDownloader extends Service implements DownloadCompleteReceiver.ICallback {
     private static final String TAG = BaseAPKDownloader.class.getSimpleName();
@@ -31,7 +36,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
 
     @Override
     public void onCreate() {
-        Log.v(TAG, "APKDownload Service -> onCreate");
+        Log.v(TAG, "===== APKDownload Service -> onCreate =====");
         super.onCreate();
 
         if (!isRegistered) {
@@ -47,7 +52,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.v(TAG, "APKDownload Service -> onStartCommand");
+        Log.v(TAG, "===== APKDownload Service -> onStartCommand =====");
         FileData fileData = intent.getParcelableExtra(EXTRA_DOWNLOAD_FILE_DATA);
         if (fileData != null) {
             if (!TextUtils.isEmpty(fileData.getUri()) && fileData.getUri().startsWith("http")) { // 下载只能以http/https开头
@@ -61,7 +66,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
 
     @Override
     public void onDestroy() {
-        Log.v(TAG, "APKDownload Service -> onDestroy");
+        Log.v(TAG, "===== APKDownload Service -> onDestroy =====");
         if (isRegistered) {
             unRegisterReceiver();
         }
@@ -71,7 +76,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
 
     @Override
     public IBinder onBind(Intent intent) {
-        Log.v(TAG, "APKDownload Service -> onBind");
+        Log.v(TAG, "===== APKDownload Service -> onBind =====");
         return null;
     }
 
@@ -147,13 +152,14 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
     private boolean passDuplicateCheck(FileData fileData) {
         // If is duplicate and disallow duplicate
         boolean isDuplicate = mFileLists.contains(fileData) && !fileData.isAllowDuplicated();
-        if (isDuplicate) {
-            FileData oldFileData = mFileLists.get(mFileLists.indexOf(fileData));
-            int status = checkStatus(oldFileData.getDownloadId());
-            return  (status == -1 || status == DownloadManager.STATUS_FAILED || status == DownloadManager.STATUS_SUCCESSFUL);
-        } else {
-            return true;
-        }
+//        if (isDuplicate) {
+//            FileData oldFileData = mFileLists.get(mFileLists.indexOf(fileData));
+//            int status = checkStatus(oldFileData.getDownloadId());
+//            return  (status == -1 || status == DownloadManager.STATUS_FAILED || status == DownloadManager.STATUS_SUCCESSFUL);
+//        } else {
+//            return true;
+//        }
+        return !isDuplicate;
 
         // if download is interrupt or finish
     }
@@ -191,7 +197,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
      * See{@link DownloadManager#ACTION_DOWNLOAD_COMPLETE} etc.
      */
     private void registerReceiver() {
-        Log.v(TAG, "BroadcastReceiver -> registered");
+        Log.v(TAG, "----- BroadcastReceiver -> registered -----");
         isRegistered = true;
         if (mCompleteReceiver == null) {
             mCompleteReceiver = new DownloadCompleteReceiver();
@@ -205,7 +211,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
     }
 
     private void unRegisterReceiver() {
-        Log.v(TAG, "BroadcastReceiver -> unRegistered");
+        Log.v(TAG, "----- BroadcastReceiver -> unRegistered -----");
         isRegistered = false;
         if (mCompleteReceiver != null) {
             getApplicationContext().unregisterReceiver(mCompleteReceiver);
@@ -222,6 +228,10 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
         onClickNotification(fileData);
     }
 
+    /**
+     * 注意COMPLETE广播不仅仅是下载完成收到，下载失败、成功都是这个广播。但是取消下载不会发广播
+     * @param id
+     */
     @Override
     public void onComplete(long id) {
         Log.i(TAG, "BroadcastReceiver -> onComplete: " + id);
@@ -229,23 +239,17 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
         if (fileData == null) {
             return;
         }
-        // User canceling download progress also receives COMPLETE broaddcast
-        if (checkStatus(id) == -1) {
-            remove(id);
-            return;
-        }
-        onDownloadComplete(fileData);
-        if (fileData.isInvokeInstall()) {
-            File destApk = getDestFile(id);
-            if (destApk == null) {
-                return;
-            }
-            DownloadCompleteReceiver.invokeInstall(getApplicationContext(), destApk);
-        }
-        remove(id);
+        // User canceling download progress also receives COMPLETE broadcast
+        checkStatus(fileData);
     }
 
-    private int checkStatus(long downloadId) {
+    /**
+     * To check status as soon as receiving COMPLETE broadcast
+     * @param fileData
+     * @return Status code, See in {@link DownloadManager#STATUS_FAILED} etc.
+     */
+    public int checkStatus(FileData fileData) {
+        long downloadId = fileData.getDownloadId();
         DownloadManager.Query query = new DownloadManager.Query().setFilterById(downloadId);
         Cursor c = mDownloadManager.query(query);
         try {
@@ -260,12 +264,24 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
                     case DownloadManager.STATUS_RUNNING:
                         break;
                     case DownloadManager.STATUS_SUCCESSFUL:
+                        if (fileData.isInvokeInstall()) {
+                            File destApk = getDestFile(downloadId);
+                            if (destApk == null) {
+                                return -1;
+                            }
+                            DownloadCompleteReceiver.invokeInstall(getApplicationContext(), destApk);
+                        }
+                        onDownloadComplete(fileData);
+                        remove(downloadId);
                         break;
                     case DownloadManager.STATUS_FAILED:
+                        onDownloadFailed(fileData);
                         remove(downloadId);
                         break;
                 }
                 return status;
+            } else {
+                remove(downloadId); // Cancel downloading status
             }
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
@@ -304,6 +320,13 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
      * @param fileData
      */
     protected abstract void onDownloadComplete(FileData fileData);
+
+    /**
+     * Called when receiving system broadcast of downloading failed
+     *
+     * @param fileData
+     */
+    protected abstract void onDownloadFailed(FileData fileData);
 
     /**
      * Called when receiving system broadcast of clicking on notification by user

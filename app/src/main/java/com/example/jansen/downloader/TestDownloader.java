@@ -38,6 +38,11 @@ public class TestDownloader extends BaseAPKDownloader {
     }
 
     @Override
+    protected void onDownloadFailed(FileData fileData) {
+        Toast.makeText(getApplicationContext(), "onDownloadFailed", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
     protected void onClickNotification(FileData fileData) {
         Toast.makeText(getApplicationContext(), "onClickNotification", Toast.LENGTH_SHORT).show();
     }

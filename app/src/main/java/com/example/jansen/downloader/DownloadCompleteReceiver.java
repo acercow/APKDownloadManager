@@ -14,7 +14,12 @@ import com.example.jansen.down.BuildConfig;
 
 import java.io.File;
 
-
+/**
+ * Created by zhaosen, 2018-05-13
+ *
+ * A BroadcastReceiver to notify APKDownloader that download status changed, the broadcast comes from
+ * system's DownloadManager progress.
+ */
 public class DownloadCompleteReceiver extends BroadcastReceiver {
     public static final String APK_FILEPROVIDER_AUTHORITIES = BuildConfig.APPLICATION_ID + ".fileprovider"; // see in res/AndroidManifest.xml
     private static final String TAG = DownloadCompleteReceiver.class.getSimpleName();
@@ -33,6 +38,7 @@ public class DownloadCompleteReceiver extends BroadcastReceiver {
             return; // may not invoked by this downloader
         }
         switch (intent.getAction()) {
+            // Important!!! 不仅仅是下载成功，下载失败也会收到此广播，但是下载取消不会
             case DownloadManager.ACTION_DOWNLOAD_COMPLETE:
                 if (mListener != null) {
                     mListener.onComplete(id);

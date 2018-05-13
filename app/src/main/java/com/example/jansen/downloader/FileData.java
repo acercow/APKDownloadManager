@@ -22,7 +22,7 @@ public class FileData implements Parcelable {
     private long downloadId;
 
     public FileData(String uri, String title, String fileName) {
-        this(uri, true, false, title, "", fileName);
+        this(uri, true, false, title, "下载啦", fileName);
     }
 
     public FileData(String uri, boolean isEvokeInstall, boolean isAllowDuplicated, String title, String description, String fileName) {
