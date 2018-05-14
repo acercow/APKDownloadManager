@@ -35,6 +35,7 @@
         <service android:name="com.example.jansen.downloader.FakeDownloader"
             android:exported="false">
             <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
                 <data android:scheme="arczues"/>
                 <data android:host="startdownload"/>
             </intent-filter>

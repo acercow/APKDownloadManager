@@ -23,7 +23,7 @@ import java.util.List;
  *
  * A service of apk downloading, which contains a downloading queue to control duplicate
  * downloading(if disallow duplicate), status changing, auto installing, path management,
- * lifecycle management.
+ * lifecycle management, dealing with unconventional operation(exp. deleting file while downloading).
  *
  */
 public abstract class BaseAPKDownloader extends Service implements DownloadCompleteReceiver.ICallback {
@@ -324,7 +324,7 @@ public abstract class BaseAPKDownloader extends Service implements DownloadCompl
     public static void startDownload(Context context, FileData fileData) {
         Intent intent = new Intent();
         intent.setData(Uri.parse("arczues://startdownload"));
-        intent.setPackage(context.getPackageName());
+        intent.setPackage(context.getPackageName()); // to support implicit intent on service
         intent.putExtra(EXTRA_DOWNLOAD_FILE_DATA, fileData);
         context.startService(intent);
     }
