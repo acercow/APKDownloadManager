@@ -32,7 +32,7 @@
             </intent-filter>
         </activity>
 
-        <service android:name="com.example.jansen.downloader.FakeDownloader"
+        <service android:name=".downloader.FakeDownloader"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

@@ -1,4 +1,4 @@
-package com.example.jansen.downloader;
+package com.example.jansen.down.downloader;
 
 
 import android.app.DownloadManager;
@@ -9,31 +9,33 @@ import android.net.Uri;
 import android.os.Build;
 import android.support.v4.content.FileProvider;
 import android.text.TextUtils;
-import android.util.Log;
 
 import com.example.jansen.down.BuildConfig;
+import com.example.jansen.down.utils.LogUtil;
 
 import java.io.File;
 
+
 /**
- * Created by zhaosen, 2018-05-13
+ * Created by zhaosen 2018-05-13
  *
  * A BroadcastReceiver to notify APKDownloader that download status changed, the broadcast comes from
  * system's DownloadManager progress.
+ *
  */
-public class DownloadCompleteReceiver extends BroadcastReceiver {
-    public static final String APK_FILEPROVIDER_AUTHORITIES = BuildConfig.APPLICATION_ID + ".fileprovider"; // see in res/AndroidManifest.xml
-    private static final String TAG = DownloadCompleteReceiver.class.getSimpleName();
+public class APKDownloaderReceiver extends BroadcastReceiver {
+    private static final String TAG = APKDownloaderReceiver.class.getSimpleName();
+    public static final String WEIBO_FILEPROVIDER_AUTHORITIES = BuildConfig.APPLICATION_ID + ".fileprovider"; // see in res/AndroidManifest.xml
 
-    private ICallback mListener;
+    private IReceiveCallback mListener;
 
-    public void setCompleteListener(ICallback listener) {
+    public void setOnReceiveListener(IReceiveCallback listener) {
         mListener = listener;
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.i(TAG, "Receive DownloadManager broadcast: " + intent.getAction());
+        LogUtil.i("Receive DownloadManager broadcast: " + intent.getAction());
         if (TextUtils.isEmpty(intent.getAction())) {
             return;
         }
@@ -63,10 +65,21 @@ public class DownloadCompleteReceiver extends BroadcastReceiver {
 
     }
 
-    public interface ICallback {
+    public interface IReceiveCallback {
+        /***
+         * Called when clicking on notification, does not support  MIUI-based phone
+         * @param id
+         */
         void onClickNotification(long id);
+
+        /**
+         * Important!!! Received system broadcast, not only called when download completes,
+         * but also cancels, fails
+         * @param id
+         */
         void onComplete(long id);
     }
+
 
     public static void invokeInstall(Context context, File apkPath) {
         Intent installIntent = new Intent(Intent.ACTION_VIEW);
@@ -77,14 +90,21 @@ public class DownloadCompleteReceiver extends BroadcastReceiver {
         context.startActivity(installIntent);
     }
 
+    /**
+     * Android Nougat restricted permission of writing on public storage directory
+     *
+     * @param context
+     * @param file
+     * @return
+     */
     private static Uri generateUri(Context context, File file) {
         Uri uri;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            uri = FileProvider.getUriForFile(context, APK_FILEPROVIDER_AUTHORITIES, file);
+            uri = FileProvider.getUriForFile(context, WEIBO_FILEPROVIDER_AUTHORITIES, file);
         } else {
             uri = Uri.fromFile(file);
         }
-        Log.i(TAG, "uri: " + uri);
+        LogUtil.i("uri: " + uri);
         return uri;
     }
 }
